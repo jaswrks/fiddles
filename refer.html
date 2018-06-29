@@ -18,12 +18,12 @@
 
             $document.on( 'referral_tracked', function( event, response ) {
                 console.log( 'referral_tracked', response );
-                $responseStatus.text( 'referral_tracked' );
+                $event.text( 'referral_tracked' );
                 $response.text( JSON.stringify( response, null, 2 ) );
             } );
             $document.on( 'referral_tracked_error', function( event, response ) {
                 console.error( 'referral_tracked_error', response );
-                $responseStatus.text( 'referral_tracked_error' );
+                $event.text( 'referral_tracked_error' );
                 $response.text( JSON.stringify( response, null, 2 ) );
             } );
 
