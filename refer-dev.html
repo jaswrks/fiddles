@@ -78,13 +78,13 @@
             endpoint += vendor_id;
 
             // Load the affiliate param to use.
-            var affiliate_script_param = 'aff';
+            var affiliate_param = 'aff';
 
             // Locate any affiliate id passed.
             var affiliate_id = String( get_param( affiliate_param ) );
 
-            // Back compat., see: <https://github.com/Automattic/refer.wordpress.com/issues/38>
-            if ( ! affiliate_id && ! affiliate_script_param ) {
+            // Back compat.
+            if ( ! affiliate_id ) {
                 affiliate_id = String( get_param( 'affiliate' ) );
             }
 
