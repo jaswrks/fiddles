@@ -29,9 +29,113 @@
                 $event.text( 'referral_tracked_error' );
                 $response.text( JSON.stringify( response, null, 2 ) );
             } );
-
-            $body.append( '<scr' + 'ipt data-vendor="137763" src="https://refer-dev.jaswrks.com/wp-content/themes/refer-wordpress/assets/js/referrals.min.js?v=' + Date.now() + '"></scr' + 'ipt>' );
         } );
+    </script>
+    <script>
+      (function ($) {
+        /**
+         *   Returns a parameter from the URL query
+         *
+         *   @param string name
+         *   @param string default
+         *
+         *   @return string
+         */
+        var get_param = function (name) {
+            var regex = new RegExp('[\\?&]' + name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]') + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        };
+
+        /**
+         *   Track any referral upon load
+         */
+        $(document).ready(function () {
+
+            // Load the vendor id
+            var vendor_id = '594568';
+
+            // Not a valid vendor id, bail
+            if (!vendor_id || !vendor_id.match(/^[0-9]+$/gi)) {
+                return;
+            }
+
+            // Load the clicks endpoint checking for data attribute override (used in testing)
+            var endpoint = 'https://refer-dev.jaswrks.com/clicks/';
+
+            // No or invalid endpoint, bail
+            if (!endpoint) {
+                return;
+            }
+
+            // Add the vendor to the endpoint url
+            endpoint += vendor_id;
+
+            // Load the affiliate param to use.
+            var affiliate_script_param = 'aff';
+
+            // Locate any affiliate id passed.
+            var affiliate_id = String( get_param( affiliate_param ) );
+
+            // Back compat., see: <https://github.com/Automattic/refer.wordpress.com/issues/38>
+            if ( ! affiliate_id && ! affiliate_script_param ) {
+                affiliate_id = String( get_param( 'affiliate' ) );
+            }
+
+            // Bail if affiliate ID is empty or invalid.
+            if ( ! affiliate_id || ! /^[0-9]+$/.test( affiliate_id ) ) {
+                return;
+            }
+
+            // Prepare the post data
+            var postData = {
+                affiliate_id: affiliate_id,
+                referrer: window.location.href,
+            };
+
+            // Load the campaign param to use
+            var campaign_param = 'cid';
+
+            // Locate any campaign id passed and add to post data
+            var campaign_id = String(get_param(campaign_param));
+
+            if (campaign_id.match(/^[0-9]+$/gi)) {
+                postData.campaign_id = campaign_id;
+            }
+
+            // Load the subid param to use
+            var subid_param = 'sid';
+
+            // Locate any sub id passed and add to post data
+            var sub_id = String(get_param(subid_param)).substr(0, 255);
+
+            if (sub_id.length) {
+                postData.sub_id = sub_id;
+            }
+
+            // Send referral to refer.wordpress.com
+            $.ajax({
+                type: 'POST',
+                url: endpoint,
+                data: postData,
+                dataType: 'json',
+                xhrFields: {withCredentials: true},
+                success: function (response) {
+
+                    // Trigger custom referral tracked event with returned referral data
+                    $(document).trigger('referral_tracked', response);
+
+                },
+                error: function (response) {
+
+                    // Trigger custom referral tracked event with returned referral data on error
+                    $(document).trigger('referral_tracked_error', response);
+
+                },
+            });
+
+        });
+    })(jQuery);
     </script>
   </body>
 </html>
