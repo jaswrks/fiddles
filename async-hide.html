@@ -4,8 +4,8 @@
     <title>Async Hide Demo</title>
 
     <style>
-      html { transition: opacity .5s; }
-      html.async-hide { opacity: 0 !important; }
+      .async-hide { opacity: 0 !important; }
+      .async-trans { transition: opacity .5s; }
     </style>
 
     <script>
@@ -17,7 +17,10 @@
 
 		  var stopHiding = function() {
 			  dl.hide.end = null;
-			  clearTimeout( timeout ), clearInterval( interval );
+			  clearTimeout( timeout );
+			  clearInterval( interval );
+
+			  de.className += ' async-trans';
 			  de.className = de.className.replace( /\basync-hide\b/g, '' );
 		  };
 		  dl.hide = { 'GTM-XXXXXX': true, end: stopHiding, timeout: timeoutTime };
