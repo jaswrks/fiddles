@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Async Blur Demo</title>
+
+    <style>
+      html { transition: opacity .5s; }
+      html.async-blur { opacity: .025 !important; filter:blur(5px); }
+    </style>
+
+    <script>
+    ( function() {
+		  var d = document;
+		  var de = d.documentElement;
+		  var interval, timeout, timeoutTime = 3000;
+		  var dl = ( window.dataLayer = window.dataLayer || [] );
+
+		  var stopHiding = function() {
+			  dl.hide.end = null;
+			  clearTimeout( timeout ), clearInterval( interval );
+			  de.className = de.className.replace( /\basync-blur\b/g, '' );
+		  };
+		  dl.hide = { 'GTM-XXXXXX': true, end: stopHiding, timeout: timeoutTime };
+
+		  de.className += ' async-blur';
+		  interval      = setInterval( function() {
+			  var cb = d.querySelector( '.a8c-cookie-banner' );
+			  if( cb && cb.style.display !== 'none' ) { stopHiding(); }
+		  }, 100 );
+		  timeout       = setTimeout( stopHiding, timeoutTime );
+	} )();
+  </script>
+
+  </head>
+
+  <body style="background:#234598; padding:5rem;">
+    <div style="background:#fff; border:2px solid #000; border-radius:5px; padding:5rem; max-width:1400px; margin:0 auto; text-align:center;">
+      <div>
+        <img src="https://cdn.svgporn.com/logos/github-icon.svg" />
+	<img src="https://cdn.svgporn.com/logos/git-icon.svg" />
+      </div>
+      <img src="https://cdn.svgporn.com/logos/github.svg" />
+    </div>
+  </body>
+
+</html>
