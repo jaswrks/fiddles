@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>referrals.min.js | Refer Platform (develop)</title>
+  </head>
+  <body>
+    <div>referrals.min.js | Refer Platform (develop)</div>
+
+    <hr />
+
+    <pre id="event">... referral_tracked event not fired yet</pre>
+    <pre id="response"></pre>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        jQuery( document ).ready( function( $ ) {
+            console.log( 'setup' );
+
+            var $document = $( document ),
+                $body = $( 'body' );
+                $event = $( '#event' ),
+                $response = $( '#response' );
+
+            $document.on( 'referral_tracked', function( event, response ) {
+                console.log( 'referral_tracked', response );
+                $event.text( 'referral_tracked' );
+                $response.text( JSON.stringify( response, null, 2 ) );
+            } );
+            $document.on( 'referral_tracked_error', function( event, response ) {
+                console.error( 'referral_tracked_error', response );
+                $event.text( 'referral_tracked_error' );
+                $response.text( JSON.stringify( response, null, 2 ) );
+            } );
+        } );
+    </script>
+    <script>
+      (function ($) {
+        /**
+         *   Returns a parameter from the URL query
+         *
+         *   @param string name
+         *   @param string default
+         *
+         *   @return string
+         */
+        var get_param = function (name) {
+            var regex = new RegExp('[\\?&]' + name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]') + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        };
+
+        /**
+         *   Track any referral upon load
+         */
+        $(document).ready(function () {
+
+            // Load the vendor id
+            var vendor_id = '67402';
+          
+            console.log( 'vendor ID: ' + vendor_id );
+
+            // Not a valid vendor id, bail
+            if (!vendor_id.match(/^[0-9]+$/gi)) {
+                console.log( 'missing vendor ID' );
+                return;
+            }
+
+            // Load the clicks endpoint checking for data attribute override (used in testing)
+            var endpoint = 'https://modeeffect.wpsandbox.me/clicks/';
+
+            // No or invalid endpoint, bail
+            if (!endpoint) {
+                console.log( 'missing endpoint' );
+                return;
+            }
+
+            // Add the vendor to the endpoint url
+            endpoint += vendor_id;
+
+            // Load the affiliate param to use.
+            var affiliate_param = 'aff';
+
+            // Locate any affiliate id passed.
+            var affiliate_id = String( get_param( affiliate_param ) );
+
+            // Back compat.
+            if ( ! affiliate_id ) {
+                affiliate_id = String( get_param( 'affiliate' ) );
+            }
+
+            // Bail if affiliate ID is empty or invalid.
+            if ( ! affiliate_id || ! /^[0-9]+$/.test( affiliate_id ) ) {
+                console.log( 'missing affiliate ID' );
+                return;
+            }
+
+            // Prepare the post data
+            var postData = {
+                affiliate_id: affiliate_id,
+                referrer: window.location.href,
+            };
+
+            // Load the campaign param to use
+            var campaign_param = 'cid';
+
+            // Locate any campaign id passed and add to post data
+            var campaign_id = String(get_param(campaign_param));
+
+            if (campaign_id.match(/^[0-9]+$/gi)) {
+                postData.campaign_id = campaign_id;
+            }
+
+            // Load the subid param to use
+            var subid_param = 'sid';
+
+            // Locate any sub id passed and add to post data
+            var sub_id = String(get_param(subid_param)).substr(0, 255);
+
+            if (sub_id.length) {
+                postData.sub_id = sub_id;
+            }
+
+            // Send referral to refer.wordpress.com
+            $.ajax({
+                type: 'POST',
+                url: endpoint,
+                data: postData,
+                dataType: 'json',
+                xhrFields: {withCredentials: true},
+                success: function (response) {
+
+                    // Trigger custom referral tracked event with returned referral data
+                    $(document).trigger('referral_tracked', response);
+
+                },
+                error: function (response) {
+
+                    // Trigger custom referral tracked event with returned referral data on error
+                    $(document).trigger('referral_tracked_error', response);
+
+                },
+            });
+
+        });
+      })(jQuery);
+    </script>
+  </body>
+</html>
