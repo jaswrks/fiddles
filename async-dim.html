@@ -1,49 +1,52 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Async Dim Demo</title>
+    <head>
+        <title>Async Dim Demo</title>
 
-    <style>
-      .async-dim { opacity: .025 !important; }
-      .async-trans { transition: opacity .5s; }
-    </style>
+        <style>
+            .async-dim { opacity: .025 !important; }
+            .async-trans { transition: opacity .5s; }
+        </style>
 
-    <script>
-    ( function() {
-		  var d = document;
-		  var de = d.documentElement;
-		  var interval, timeout, timeoutTime = 3000;
-		  var dl = ( window.dataLayer = window.dataLayer || [] );
+        <script>
+            ( function() {
+                var doc = document;
+                var docElem = doc.documentElement;
+                var timeout, timeoutTime = 3000, interval, ended = false;
+                var dataLayer = ( window.dataLayer = window.dataLayer || [] );
 
-		  var stopHiding = function() {
-			  dl.hide.end = null;
-			  clearTimeout( timeout );
-			  clearInterval( interval );
+                var end = function() {
+                    if ( ended ) return;
 
-			  de.className += ' async-trans';
-			  de.className = de.className.replace( /\basync-dim\b/g, '' );
-		  };
-		  dl.hide = { 'GTM-XXXXXX': true, end: stopHiding, timeout: timeoutTime };
+                    ended = true;
+                    clearTimeout( timeout );
+                    clearInterval( interval );
 
-		  de.className += ' async-dim';
-		  interval      = setInterval( function() {
-			  var cb = d.querySelector( '.a8c-cookie-banner' );
-			  if( cb && cb.style.display !== 'none' ) { stopHiding(); }
-		  }, 100 );
-		  timeout       = setTimeout( stopHiding, timeoutTime );
-	} )();
-  </script>
+                    docElem.className += ' async-trans';
+                    setTimeout( function() {
+                        docElem.className = docElem.className.replace( /\basync-dim\b/g, '' );
+                    }, 0 );
+                };
+                dl.hide = { start: Date.now(), timeout: timeoutTime, end: end, 'GTM-XXXXXX': true };
 
-  </head>
+                docElem.className += ' async-dim';
+                interval      = setInterval( function() {
+                    var cb = doc.querySelector( '.a8c-cookie-banner' );
+                    if( cb && cb.style.display !== 'none' ) end();
+                }, 100 );
+                timeout       = setTimeout( end, timeoutTime );
+            } )();
+        </script>
 
-  <body style="background:#234598; padding:5rem;">
-    <div style="background:#fff; border:2px solid #000; border-radius:5px; padding:5rem; max-width:1400px; margin:0 auto; text-align:center;">
-      <div>
-        <img src="https://cdn.svgporn.com/logos/github-icon.svg" />
-	<img src="https://cdn.svgporn.com/logos/git-icon.svg" />
-      </div>
-      <img src="https://cdn.svgporn.com/logos/github.svg" />
-    </div>
-  </body>
+    </head>
 
+    <body style="background:#234598; padding:5rem;">
+        <div style="background:#fff; border:2px solid #000; border-radius:5px; padding:5rem; max-width:1400px; margin:0 auto; text-align:center;">
+            <div>
+                <img src="https://cdn.svgporn.com/logos/github-icon.svg" />
+                <img src="https://cdn.svgporn.com/logos/git-icon.svg" />
+            </div>
+            <img src="https://cdn.svgporn.com/logos/github.svg" />
+        </div>
+    </body>
 </html>
