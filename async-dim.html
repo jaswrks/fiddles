@@ -27,7 +27,7 @@
                         docElem.className = docElem.className.replace( /\basync-dim\b/g, '' );
                     }, 0 );
                 };
-                dl.hide = { start: Date.now(), timeout: timeoutTime, end: end, 'GTM-XXXXXX': true };
+                dataLayer.hide = { start: Date.now(), timeout: timeoutTime, end: end, 'GTM-XXXXXX': true };
 
                 docElem.className += ' async-dim';
                 interval      = setInterval( function() {
