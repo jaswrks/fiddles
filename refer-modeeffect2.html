@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>referrals.min.js | Refer Platform (develop)</title>
+  </head>
+  <body>
+    <div>referrals.min.js | Refer Platform (develop)</div>
+
+    <hr />
+
+    <pre id="event">... referral_tracked event not fired yet</pre>
+    <pre id="response"></pre>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        jQuery( document ).ready( function( $ ) {
+            console.log( 'setup' );
+
+            var $document = $( document ),
+                $body = $( 'body' );
+                $event = $( '#event' ),
+                $response = $( '#response' );
+
+            $document.on( 'referral_tracked', function( event, response ) {
+                console.log( 'referral_tracked', response );
+                $event.text( 'referral_tracked' );
+                $response.text( JSON.stringify( response, null, 2 ) );
+            } );
+            $document.on( 'referral_tracked_error', function( event, response ) {
+                console.error( 'referral_tracked_error', response );
+                $event.text( 'referral_tracked_error' );
+                $response.text( JSON.stringify( response, null, 2 ) );
+            } );
+        } );
+    </script>
+    <script>
+    (function($) {
+
+        var ReferWP = {
+
+            /**
+             *   @var object
+             */
+            script$: $( '<scr' + 'ipt data-vendor="137763" src="http://modeeffect.wpsandbox.me/wp-content/themes/refer-wordpress/assets/js/src/referrals.js"></scr' + 'ipt>' ),
+
+            /**
+             *   Returns a parameter from the URL query
+             *
+             *   @param string name
+             *   @param string default
+             *
+             *   @return string
+             */
+            getParam: function(name) {
+                var regex = new RegExp('[\\?&]' + name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]') + '=([^&#]*)');
+                var results = regex.exec(location.search);
+                return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+            },
+
+            /**
+             *   Returns the current affiliate id from the query params
+             *
+             *   @return string
+             */
+            getAffiliateID: function() {
+
+                // Load the affiliate param to use.
+                var affiliate_script_param = ReferWP.script$.data('param');
+                var affiliate_param = affiliate_script_param || 'aff';
+
+                // Locate any affiliate id passed.
+                var affiliate_id = String(ReferWP.getParam(affiliate_param));
+
+                // Back compat., see: <https://github.com/Automattic/refer.wordpress.com/issues/38>
+                if (!affiliate_id && !affiliate_script_param) {
+                    affiliate_id = String(ReferWP.getParam('affiliate'));
+                }
+
+                // Return the id
+                return affiliate_id;
+
+            },
+
+            /**
+             *   Returns the current campaign id from the query params
+             *
+             *   @return string
+             */
+            getCampaignID: function() {
+
+                // Load the campaign param to use
+                var campaign_param = ReferWP.script$.data('campaign-param') || ReferWP.script$.data('campaign-id-param') || 'cid';
+
+                // Locate any campaign id passed and add to post data
+                var campaign_id = String(ReferWP.getParam(campaign_param));
+
+                // Return the id
+                return campaign_id;
+
+            },
+
+            /**
+             *   Returns the current sub id from the query params
+             *
+             *   @return string
+             */
+            getSubID: function() {
+
+                // Load the subid param to use
+                var subid_param = ReferWP.script$.data('subid-param') || ReferWP.script$.data('sub-id-param') || 'sid';
+
+                // Locate any sub id passed and add to post data
+                var sub_id = String(ReferWP.getParam(subid_param)).substr(0, 255);
+
+                // Return the id
+                return sub_id;
+
+            },
+
+            /**
+             *   Track incoming referrals
+             *
+             *   @return void
+             */
+            trackReferral: function() {
+
+                // Script not found, bail
+                if (!ReferWP.script$.length) {
+                    return;
+                }
+
+                // Load the vendor id
+                var vendor_id = String(ReferWP.script$.data('vendor') || '');
+
+                // Not a valid vendor id, bail
+                if (!vendor_id || !vendor_id.match(/^[0-9]+$/gi)) {
+                    return;
+                }
+
+                // Load the clicks endpoint checking for data attribute override (used in testing)
+                var endpoint = ReferWP.script$.data('endpoint') || 'https://refer.wordpress.com/clicks/';
+
+                // No or invalid endpoint, bail
+                if (!endpoint) {
+                    return;
+                }
+
+                // Add the vendor to the endpoint url
+                endpoint += vendor_id;
+
+                // Load the affiliate id
+                affiliate_id = ReferWP.getAffiliateID();
+
+                // Bail if affiliate ID is empty or invalid.
+                if (!affiliate_id || !/^[0-9]+$/.test(affiliate_id)) {
+                    return;
+                }
+
+                // Prepare the post data
+                var postData = {
+                    affiliate_id: affiliate_id,
+                    referrer: window.location.href,
+                };
+
+                // Load the campaign id
+                var campaign_id = ReferWP.getCampaignID();
+
+                if (campaign_id.match(/^[0-9]+$/gi)) {
+                    postData.campaign_id = campaign_id;
+                }
+
+                // Load the subid
+                var sub_id = ReferWP.getSubID();
+
+                if (sub_id.length) {
+                    postData.sub_id = sub_id;
+                }
+
+                // Send referral to refer.wordpress.com
+                $.ajax({
+                    type: 'POST',
+                    url: endpoint,
+                    data: postData,
+                    dataType: 'json',
+                    xhrFields: {withCredentials: true},
+                    success: function(response) {
+
+                        // Trigger custom referral tracked event with returned referral data
+                        $(document).trigger('referral_tracked', response);
+
+                    },
+                    error: function(response) {
+
+                        // Trigger custom referral tracked event with returned referral data on error
+                        $(document).trigger('referral_tracked_error', response);
+
+                    },
+                });
+
+            },
+
+            /**
+             *   Adds a query argument to the provided url
+             *
+             *   @param string key
+             *   @param string value
+             *
+             *   @return string
+             */
+            addQueryArg: function(key, value, url) {
+                var delimiter = url.indexOf('?') >= 0 ? '&' : '?';
+                var fragment = url.replace(/^[^#]+/gi, '');
+                var url = url.replace(/#[^#]*$/gi, '');
+                return url + delimiter + encodeURIComponent(key) + '=' + encodeURIComponent(value) + fragment;
+            },
+
+            /**
+             *   Updates links for all elements matching provided selector.
+             *   Optionally, options object can be passed for custom regexp matching
+             *   or to set custom url parameters
+             *
+             *   @param string|jQuery selector
+             *   @param object options
+             *
+             *   @return void
+             */
+            updateLinks: function(selector, options) {
+
+                // Load the params to use
+                options = options || {};
+                var param = options.param || 'aff';
+                var campaign_param = options.campaign_param || options.campaign_id_param || 'cid';
+                var subid_param = options.subid_param || options.sub_id_param || 'sid';
+                var regex = options.regex || '';
+                var callback = options.callback || null;
+
+                // Load the affiliate id
+                var affiliate_id = ReferWP.getAffiliateID();
+
+                if (!affiliate_id) {
+                    return;
+                }
+
+                // Load the campaign and sub ids
+                var campaign_id = ReferWP.getCampaignID();
+                var sub_id = ReferWP.getSubID();
+
+                // Update the link for elements matching selector
+                $(selector).each(function() {
+
+                    // Load the element
+                    var element$ = $(this);
+
+                    // Process all href and action attributes on elements
+                    ['href', 'action'].forEach(function(attr) {
+
+                        // Element doesnt have attribute, skip
+                        if (!element$.is('[' + attr + ']')) {
+                            return;
+                        }
+
+                        // Load the url
+                        var url = element$.attr(attr);
+
+                        // If regex provided skip if not matching
+                        if (regex && !regex.test(url)) {
+                            return;
+                        }
+
+                        // if callback provided and returning false, skip
+                        if (typeof callback === 'function' && callback(element$, url) === false) {
+                            return;
+                        }
+
+                        // Add affiliate param if not already present
+                        if (!RegExp('[?&]' + param + '=', 'gi').test(url)) {
+                            url = ReferWP.addQueryArg(param, affiliate_id, url);
+                        }
+
+                        // Add campaign param if not already present
+                        if (campaign_id && !RegExp('[?&]' + campaign_param + '=', 'gi').test(url)) {
+                            url = ReferWP.addQueryArg(campaign_param, campaign_id, url);
+                        }
+
+                        // Add subid param if not already present
+                        if (sub_id && !RegExp('[?&]' + subid_param + '=', 'gi').test(url)) {
+                            url = ReferWP.addQueryArg(subid_param, sub_id, url);
+                        }
+
+                        // Update the url
+                        element$.attr(attr, url);
+
+                    });
+
+                });
+
+            },
+
+            /**
+             *   Provided an array of domain names, updates all links
+             *   on page for <a href> and <form action> to append affiliate
+             *   parameter. Accepts array of domain name strings or objects representing
+             *   domain name and affiliate parameter to use { domain: '', param: '' }
+             *
+             *   @param array domains
+             *
+             *   @return void
+             */
+            linkDomains: function(domains) {
+
+                // Not a valid array, skip
+                if (!Array.isArray(domains)) {
+                    return;
+                }
+
+                // Process domains
+                domains.forEach(function(domain) {
+
+                    // Load the param to use
+                    var param, campaign_param, subid_param;
+
+                    if (typeof domain === 'object' && domain) {
+                        param = domain.param || 'aff';
+                        campaign_param = domain.campaign_param || domain.campaign_id_param || 'cid';
+                        subid_param = domain.subid_param || domain.sub_id_param || 'sid';
+                        domain = domain.domain || '';
+                    } else {
+                        param = 'aff';
+                        campaign_param = 'cid';
+                        subid_param = 'sid';
+                    }
+
+                    // Not a valid domain or no affiliate id, skip
+                    if (!String(domain).match(/[a-z0-9\.\-\/]+/gi)) {
+                        return;
+                    }
+
+                    // Update the links
+                    ReferWP.updateLinks('[href*="' + domain + '"]', {
+                        regex: new RegExp('^[^\?]*' + domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+                    });
+
+                    ReferWP.updateLinks('[action*="' + domain + '"]', {
+                        regex: new RegExp('^[^\?]*' + domain.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+                    });
+
+                });
+            },
+
+        };
+
+        /**
+         *   Track any referral upon load
+         */
+        $(document).ready(ReferWP.trackReferral);
+
+        /**
+         *   Expose select methods
+         */
+        window.ReferWP = $.extend(window.ReferWP || {}, {
+            linkDomains: ReferWP.linkDomains,
+            updateLinks: ReferWP.updateLinks,
+            addQueryArg: ReferWP.addQueryArg,
+        });
+
+    })(jQuery);
+    </script>
+  </body>
+</html>
